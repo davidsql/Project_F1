@@ -1,0 +1,165 @@
+WITH SeasonSplit AS (
+    SELECT
+        races.year,
+        results.driverID,
+        drivers.forename,
+        drivers.surname,
+        results.points,
+        races.round,
+        CASE
+            WHEN races.year = 1967 AND races.round BETWEEN 1 AND 6 THEN 'FH'
+            WHEN races.year = 1967 AND races.round BETWEEN 7 AND 11 THEN 'SH'
+            WHEN races.year = 1968 AND races.round BETWEEN 1 AND 6 THEN 'FH'
+            WHEN races.year = 1968 AND races.round BETWEEN 7 AND 12 THEN 'SH'
+            WHEN races.year = 1969 AND races.round BETWEEN 1 AND 6 THEN 'FH'
+            WHEN races.year = 1969 AND races.round BETWEEN 7 AND 11 THEN 'SH'
+            WHEN races.year = 1970 AND races.round BETWEEN 1 AND 7 THEN 'FH'
+            WHEN races.year = 1970 AND races.round BETWEEN 8 AND 13 THEN 'SH'
+            WHEN races.year = 1971 AND races.round BETWEEN 1 AND 6 THEN 'FH'
+            WHEN races.year = 1971 AND races.round BETWEEN 7 AND 11 THEN 'SH'
+            WHEN races.year = 1972 AND races.round BETWEEN 1 AND 6 THEN 'FH'
+            WHEN races.year = 1972 AND races.round BETWEEN 7 AND 12 THEN 'SH'
+            WHEN races.year = 1973 AND races.round BETWEEN 1 AND 8 THEN 'FH'
+            WHEN races.year = 1973 AND races.round BETWEEN 9 AND 15 THEN 'SH'
+            WHEN races.year = 1974 AND races.round BETWEEN 1 AND 8 THEN 'FH'
+            WHEN races.year = 1974 AND races.round BETWEEN 9 AND 15 THEN 'SH'
+            WHEN races.year = 1975 AND races.round BETWEEN 1 AND 7 THEN 'FH'
+            WHEN races.year = 1975 AND races.round BETWEEN 8 AND 14 THEN 'SH'
+            WHEN races.year = 1976 AND races.round BETWEEN 1 AND 8 THEN 'FH'
+            WHEN races.year = 1976 AND races.round BETWEEN 9 AND 16 THEN 'SH'
+            WHEN races.year = 1977 AND races.round BETWEEN 1 AND 9 THEN 'FH'
+            WHEN races.year = 1977 AND races.round BETWEEN 10 AND 17 THEN 'SH'
+            WHEN races.year = 1978 AND races.round BETWEEN 1 AND 8 THEN 'FH'
+            WHEN races.year = 1978 AND races.round BETWEEN 9 AND 16 THEN 'SH'
+            WHEN races.year = 1979 AND races.round BETWEEN 1 AND 7 THEN 'FH'
+            WHEN races.year = 1979 AND races.round BETWEEN 8 AND 15 THEN 'SH'
+            WHEN races.year = 1980 AND races.round BETWEEN 1 AND 7 THEN 'FH'
+            WHEN races.year = 1980 AND races.round BETWEEN 8 AND 14 THEN 'SH'
+            ELSE NULL
+        END AS Split
+    FROM f1..results
+    JOIN f1..races ON results.raceID = races.raceID
+    JOIN f1..drivers ON results.driverID = drivers.driverID
+),
+Counted AS (
+    SELECT *,
+        CASE
+            WHEN year IN (1950,1951,1952,1953,1953) THEN 4
+            WHEN year IN (1954, 1955,1956,1957) THEN 5
+            WHEN year = 1958 THEN 6
+            WHEN year = 1959 THEN 5
+            WHEN year = 1960 THEN 6
+            WHEN year IN (1961,1962) THEN 5
+            WHEN year IN (1963, 1964, 1965) THEN 6
+            WHEN year = 1966 THEN 5
+            WHEN year = 1967 AND Split = 'FH' THEN 5
+            WHEN year = 1967 AND Split = 'SH' THEN 4
+            WHEN year = 1968 AND Split = 'FH' THEN 5
+            WHEN year = 1968 AND Split = 'SH' THEN 5
+			WHEN year = 1969 AND Split = 'FH' THEN 5
+			WHEN year = 1969 AND Split = 'SH' THEN 4
+			WHEN year = 1970 AND Split = 'FH' THEN 6
+			WHEN year = 1970 AND Split = 'SH' THEN 5
+			WHEN year = 1971 AND Split = 'FH' THEN 5
+			WHEN year = 1971 AND Split = 'SH' THEN 4
+			WHEN year = 1972 AND Split = 'FH' THEN 5
+			WHEN year = 1972 AND Split = 'SH' THEN 5
+            WHEN year = 1973 AND Split = 'FH' THEN 7
+            WHEN year = 1973 AND Split = 'SH' THEN 6
+            WHEN year = 1974 AND Split = 'FH' THEN 7
+            WHEN year = 1974 AND Split = 'SH' THEN 8
+            WHEN year = 1975 AND Split = 'FH' THEN 6
+            WHEN year = 1975 AND Split = 'SH' THEN 6
+            WHEN year = 1976 AND Split = 'FH' THEN 7
+            WHEN year = 1976 AND Split = 'FH' THEN 7
+            WHEN year = 1977 AND Split = 'FH' THEN 8
+            WHEN year = 1977 AND Split = 'SH' THEN 7
+            WHEN year = 1978 AND Split = 'FH' THEN 7
+            WHEN year = 1978 AND Split = 'SH' THEN 7
+            WHEN year = 1979 AND Split = 'FH' THEN 4
+            WHEN year = 1979 AND Split = 'SH' THEN 5
+            WHEN year = 1980 AND Split = 'FH' THEN 5
+            WHEN year = 1980 AND Split = 'SH' THEN 6
+            WHEN year IN (1981,1982,1983,1984,1985,1986,1987,1988,1989,1990) THEN 11
+            WHEN year >= 1991 THEN 99 
+        END AS RacesToKeep
+    FROM SeasonSplit
+),
+CountedPoints AS (
+    SELECT 
+        year, 
+        driverID,
+        forename, 
+        surname, 
+        SUM(points) AS ChampionshipPoints,
+		 ROW_NUMBER() OVER (PARTITION BY year ORDER BY SUM(points) DESC) AS Place
+    FROM (
+        SELECT *,
+            ROW_NUMBER() OVER (
+                PARTITION BY year, driverID, Split
+                ORDER BY points DESC
+            ) AS RN
+        FROM Counted
+    ) Ranked
+    WHERE RN <= RacesToKeep
+    GROUP BY year, driverID, forename, surname
+),
+ChampionshipSummary AS (
+    SELECT 
+        driverID, 
+        forename, 
+        surname, 
+        SUM(ChampionshipPoints) AS ChampionshipPoints,
+		COUNT(CASE WHEN Place = 1 THEN 1 ELSE NULL END) AS Championships
+    FROM CountedPoints
+    WHERE driverID IN (1, 20, 30, 102, 117, 830)
+    GROUP BY driverID, forename, surname
+),
+Perc AS (
+    SELECT  
+        drivers.driverID,
+        drivers.forename,
+        drivers.surname,
+        SUM(results.points) AS Points,
+        COUNT(results.position) AS Races, 
+        COUNT(CASE WHEN results.position = 1 THEN 1 END) AS Wins,
+        COUNT(CASE WHEN results.position IN (1, 2, 3) THEN 1 END) AS Podiums,
+        COUNT(CASE WHEN results.grid = 1 THEN 1 END) AS Pole,
+        SUM(CASE results.position 
+                WHEN 1 THEN 25
+                WHEN 2 THEN 18
+                WHEN 3 THEN 15
+                WHEN 4 THEN 12
+                WHEN 5 THEN 10
+                WHEN 6 THEN 8
+                WHEN 7 THEN 6
+                WHEN 8 THEN 4
+                WHEN 9 THEN 2
+                WHEN 10 THEN 1
+                ELSE 0
+        END) AS AdjPts
+    FROM f1..results
+    JOIN f1..drivers ON results.driverID = drivers.driverID
+    WHERE results.driverID IN (1, 20, 30, 102, 117, 830)
+    GROUP BY drivers.driverID, drivers.forename, drivers.surname
+)
+SELECT 
+    ChampionshipSummary.forename Forname,
+    ChampionshipSummary.surname Surname,
+	Perc.Races,
+	ChampionshipSummary.Championships,
+	Perc.Wins,
+	FORMAT((CAST(Perc.Wins AS FLOAT) / Perc.Races),'P') AS WinPerc,
+    Perc.Podiums,
+	FORMAT((CAST(Perc.Podiums AS FLOAT) / Perc.Races),'P') AS PodiumPerc,
+    Perc.Pole,
+	FORMAT((CAST(Perc.Podiums AS FLOAT)/ Perc.Races),'P') AS PodiumPerc,
+    FORMAT((CAST(Perc.Pole AS FLOAT) / Perc.Races),'P') AS PolePerc,
+    Perc.Points,
+    CAST(Perc.Points/ Perc.Races AS DECIMAL(5,2)) AS Pts_per_Race,
+	ChampionshipSummary.ChampionshipPoints,
+	CAST(ChampionshipSummary.ChampionshipPoints/ Perc.Races AS DECIMAL (5,2)) AS Champ_Pts_per_Race,
+	Perc.AdjPts,
+    CAST(Perc.AdjPts/ Perc.Races AS DECIMAL(5,2)) AS AdjPts_per_Race
+FROM ChampionshipSummary 
+JOIN Perc ON ChampionshipSummary.driverID = Perc.driverID
